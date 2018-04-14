@@ -84,45 +84,6 @@ server.listen(process.env.PORT || 3000, process.env.IP || "0.0.0.0", function(){
   console.log("Chat server listening at", addr.address + ":" + addr.port);
 });
 
-// User Functionality -------
-// signup routing
-app.get("/signup", function (req, res) {
-  let user = req.query.user;
-  let pass = req.query.pass;
-  exists(collectUser,{"user":user}).then(function(bool) {
-    if (bool) {
-      // already exists
-      res.send({"error": `user ${user} already exists`})
-    } else {
-      // doesn't exist
-      console.log("signup bool", bool);
-      dbInsert(collectUser,{"user":user,"pass":pass});
-      res.send({"loggedIn": true});
-    }
-  })
-});
-
-// login routing
-app.get("/login", function (req, res) {
-  let user = req.query.user;
-  let pass = req.query.pass;
-  exists(collectUser,{"user":user, "pass":pass}).then(function(bool) {
-    if (bool) {
-      // password match
-      res.send({"loggedIn": true});
-    } else {
-      // password incorrect
-      res.send({"error":`password for user ${user} incorrect`});
-    }
-  })
-});
-
-// logout routing
-app.get("/logout", function (req, res) {
-    res.send({"loggedIn": false});
-});
-
-
 function bookSearch(searchTerm) {
   return new Promise(function(resolve,reject) {
   var options = { method: 'GET',
@@ -168,27 +129,78 @@ client.connect();
 //queries are queued and executed one after another once the connection becomes available
 
 
-const queryDB = function(table) {
+const simpleQuery = function(table) {
   return function(options) {
     return new Promise(function(resolve,reject) {
       let string;
-      console.log(options)
+      let queryEnd;      
       if (options.field !== undefined) {
-        string = `select ${options.field}`;
+        string = options.field;
       } else {
-        string = 'select *';
+        string = '*';
       }
-      let result = client.query(`${string} from ${table} where ${options.key}=${options.value};`);
-      console.log(`${string} from ${table} where ${options.key}=${options.value};`)
-      resolve(result);
+      if (options.key2 !== undefined && options.value2 !== undefined) {
+        queryEnd = ` and ${options.key2}='${options.value2}';`
+      } else {
+        queryEnd = ";"
+      }
+      let queryStr = `select ${string} from ${table} where ${options.key1}='${options.value1}'${queryEnd}`
+      console.log("queryStr",queryStr);
+      let result = client.query(queryStr);
+      resolve(result.rows);
     });
   }
 }
 
-const queryBook = queryDB("books");
-queryBook({ value: 1, key: "id"}).then(function(result) {
-  console.log("queryBook",result.rows);
+const queryUsers = simpleQuery("users");
+
+const queryBook = simpleQuery("books");
+//queryBook({ value1: 1, key1: "id"}).then(function(result) {
+//  console.log("queryBook",result.rows);
+//});
+
+// User Functionality -------
+// signup routing
+app.get("/signup", function (req, res) {
+  let user = req.query.user;
+  let pass = req.query.pass;
+  exists(collectUser,{"user":user}).then(function(bool) {
+    if (bool) {
+      // already exists
+      res.send({"error": `user ${user} already exists`})
+    } else {
+      // doesn't exist
+      console.log("signup bool", bool);
+      dbInsert(collectUser,{"user":user,"pass":pass});
+      res.send({"loggedIn": true});
+    }
+  })
 });
+
+// login routing
+app.get("/login", function (req, res) {
+  let user = req.query.user;
+  let pass = req.query.pass;
+  queryUsers({key1:"username", value1:user, key2:"password", value2:pass}).then(function(arr) {
+    if (arr[0]) {
+      // password match
+      res.send({"loggedIn": true});
+    } else {
+      // password incorrect
+      res.send({"error":`password for user ${user} incorrect`});
+    }
+  })
+});
+
+// logout routing
+app.get("/logout", function (req, res) {
+    res.send({"loggedIn": false});
+});
+
+//queryUsers({key1:"username", value1:"JG", key2:"password", value2:"made"}).then(function(arr) {
+//  if (arr[0]) { console.log("arr",arr.rows)}});
+
+
 
 // sudo service postgresql start
 // psql
@@ -197,3 +209,4 @@ queryBook({ value: 1, key: "id"}).then(function(result) {
 // create table books (id serial primary key,title varchar not null,author varchar not null,owner varchar);
 // insert into books values(default,'Black Skies','Arnaldur Indridason',null);
 // update books set owner = 1 where id=1;
+// ALTER TABLE table_name ADD COLUMN new_column_name data_type;
