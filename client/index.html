@@ -3,16 +3,41 @@
   <head>
     <title>Chat Example</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="/css/bootstrap-responsive.min.css">
     <style>
       body {
         padding-top: 60px;
       }
     </style>
-    <script src="/client.js"></script>
   </head>
   <body>
+    <div id="menu">
+  		<ul id="menuUL">
+  			<li class="selected"><a href="index.html">Home</a></li>
+  			<li><a href="about.html">All Books</a></li>
+  			<li><a href="contact.html">My Books</a></li>
+  			<li><a href="support.html">Settings</a></li>
+  		</ul>
+	  </div><br>
+    <div id="divLogin">
+      <form id="formLogin">
+        Username:<input type="text" id="username"><br>
+        Password:<input type="password" id="password">
+        <button type="submit" id="signup">Sign Up</button>
+      </form>
+      <div id="divSwapLog">
+        <p>Already a member?
+        <button id="loginSwap" type="button">Log In</button>
+      </p></div>
+      <div id="divSwapSign" hidden>
+        <p>Not yet a member?
+        <button id="signupSwap" type="button">Sign Up</button>
+      </p></div>      
+    </div>
+    <div id="divLogout">
+    </div>
+    <!--
     <div class="container" ng-controller="ChatController">
       <div class="navbar navbar-fixed-top navbar-inverse">
         <div class="navbar-inner">
@@ -59,8 +84,10 @@
         </div>
       </div>
     </div>
+    -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/jquery.min.js"></script>
+    <script src="/client.js"></script>
     <script src="/js/bootstrap.min.js"></script>
     <script src="/js/angular.min.js"></script>
   </body>

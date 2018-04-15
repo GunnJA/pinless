@@ -146,15 +146,54 @@ const simpleQuery = function(table) {
       }
       let queryStr = `select ${string} from ${table} where ${options.key1}='${options.value1}'${queryEnd}`
       console.log("queryStr",queryStr);
-      let result = client.query(queryStr);
-      resolve(result.rows);
+      let result = client.query(queryStr, (err, res) => {
+        console.log(res.rows)
+        resolve(res.rows);
+      });
     });
   }
 }
 
 const queryUsers = simpleQuery("users");
-
 const queryBook = simpleQuery("books");
+
+function rollBackDB() {
+  client.query('ROLLBACK', (err) => {
+    if (err) { console.log("rollback error:",err);
+    }
+  })
+}
+
+function commitDB() {
+  client.query('COMMIT', (err) => {
+    if (err) { console.log("commit error:",err);
+    } else {
+      console.log("commited"); 
+    }
+  });
+}
+
+const simpleCreate = function(table) {
+  return function(insertStr) {
+    return new Promise(function(resolve,reject) {
+      client.query('BEGIN', (err) => {
+        if (err) return;
+        client.query(`insert into users values(${insertStr}) returning id`, (err, res) => {
+          if (err) {
+            rollBackDB();
+          } else {
+            let result = res.rows;
+            console.log("result:",result);
+            commitDB();
+            resolve(result)
+          }
+        });
+      });
+    });
+  }
+}
+
+const simpleCreateUser = simpleCreate("user");
 //queryBook({ value1: 1, key1: "id"}).then(function(result) {
 //  console.log("queryBook",result.rows);
 //});
@@ -170,8 +209,10 @@ app.get("/signup", function (req, res) {
       res.send({"error": `user ${user} already exists`})
     } else {
       // doesn't exist
-      client.query(`insert into users values(default,null,null,null,null,'${user}','${pass}';`);
-      res.send({"loggedIn": true});
+      simpleCreateUser(`default,null,null,null,null,'${user}','${pass}'`).then(function(obj) {
+        let result = obj["0"];
+        res.send(result);
+      });
     }
   })
 });
@@ -180,15 +221,20 @@ app.get("/signup", function (req, res) {
 app.get("/login", function (req, res) {
   let user = req.query.user;
   let pass = req.query.pass;
-  queryUsers({key1:"username", value1:user, key2:"password", value2:pass}).then(function(arr) {
-    if (arr[0]) {
+  queryUsers({field:"id", key1:"username", value1:user, key2:"password", value2:pass}).then(function(obj) {
+    console.log("resultArr",obj[0]);
+    if (obj[0]) {
       // password match
-      res.send({"loggedIn": true});
+      res.send(obj[0]);
     } else {
       // password incorrect
-      res.send({"error":`password for user ${user} incorrect`});
+      res.send({"error":`username or password incorrect`});
     }
   })
+});
+
+queryUsers({key1:"username", value1:"jono", key2:"password", value2:"mate"}).then(function(arr) {
+  console.log(arr.rows);
 });
 
 // logout routing
@@ -196,44 +242,6 @@ app.get("/logout", function (req, res) {
     res.send({"loggedIn": false});
 });
 
-function rollBackDB() {
-  client.query('ROLLBACK', (err) => {
-    if (err) { console.log("rollback error:",err);
-    }
-  })
-}
-
-function commitDB() {
-  client.query('COMMIT', (err) => {
-    if (err) { console.log("commit error:",err);
-    } else {
-      console.log("commited"); 
-    }
-  })
-}
-
-const simpleCreate = function(table) {
-  return function(insertStr) {
-    return new Promise(function(resolve,reject) {
-      client.query('BEGIN', (err) => {
-        if (err) return;
-        client.query(`insert into users values(${insertStr}) returning id`, (err, res) => {
-          if (err) {
-            rollBackDB();
-          } else {
-            console.log("result:",res);
-            commitDB();
-          }
-        });
-      });
-    });
-  }
-}
-
-const simpleCreateUser = simpleCreate("user");
-
-
-simpleCreateUser(`default,null,null,null,null,'yemi','xo'`);
 
 // sudo service postgresql start
 // psql
