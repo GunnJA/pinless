@@ -1,5 +1,14 @@
 let globalVar = {};
 
+$( window ).load(function() {
+  if (window.location.hash) {
+    let hash = window.location.hash;
+    hash = hash.replace('#','');
+    globalVar["userID"] = parseInt(hash);
+    loggedIn(parseInt(hash),"champ");
+  }
+});
+
 // login/out handlers
 $("#loginSwap").click(function(event) {
   event.preventDefault();
@@ -74,6 +83,14 @@ $("#menu a").each(function(){
   //append option to select
   $select.append($option);
 });
+
+function hrefLinks(type) {
+  if (globalVar["userID"]) {
+    window.location = `/fun.html#${globalVar["userID"]}`
+  } else {
+    window.location = `/fun.html`;
+  }
+}
 
 //function ChatController($scope) {
 //        var socket = io.connect();
