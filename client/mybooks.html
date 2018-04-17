@@ -21,6 +21,11 @@
   			<li id="logout"><a href="/">Logout</a></li>
   		</ul>
 	  </div><br>
+	  <form id="formBooks">
+      Add a book:<input type="text" id="bookInput"><br>
+      <button type="submit" id="bookSearch">Search</button>
+    </form>
+    <div id="bookList"></div>
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/jquery.min.js"></script>
     <script src="/client.js"></script>

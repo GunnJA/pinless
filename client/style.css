@@ -66,6 +66,11 @@ h1 {
   }
 }
 
+.bookList {
+	grid-columns: left;
+	grid-rows: auto;
+}
+
 .hide{
   display:none;  
 }

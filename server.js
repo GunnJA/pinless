@@ -317,6 +317,18 @@ app.get("/userupdate", function (req, res) {
   });
 });
 
+// search books route
+app.get("/booksearch", function (req, res) {
+  let qstr = req.query.qstr;
+  bookSearch(qstr).then(function(arr) {
+    if (arr[0]) {
+      res.send(arr);
+    } else {
+      res.send({error: "no books found"});
+    }
+  });
+});
+
 // sudo service postgresql start
 // psql
 // \c bookdb

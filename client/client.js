@@ -135,7 +135,35 @@ $("#update").click(function(event) {
   });
 });
 
+$("#bookSearch").click(function(event) {
+  event.preventDefault();
+  let bookStr = $("#bookInput").val();
+  if (bookStr === "") {
+    window.alert("You need type something in the searchbox bro");
+  } else {
+    $.get(`/booksearch?qstr=${bookStr}`, function(obj) {
+      if (obj.error) {
+        window.alert(obj.error);
+      } else {
+        console.log(obj);
+        bookDisplay(obj)
+      }
+    });
+  }
+});
 
+function bookDisplay(arr) {
+  let htmlStr = `<ul id="bookShelf">`;
+  for (i=0; i<arr.length; i+=1) {
+    let obj = arr[i];
+    let thumb = obj["imageLinks"].smallThumbnail;
+    console.log(thumb)
+    htmlStr += `<li id="${obj.id}" class="bookList"><img src="${thumb}" alt="${obj.title}">${obj.title}</li><br>`
+  }
+  htmlStr += '</ul>'
+  $("#bookList").append($(htmlStr));
+}
+  
 //function ChatController($scope) {
 //        var socket = io.connect();
 
