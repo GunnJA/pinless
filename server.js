@@ -122,12 +122,11 @@ function bookSearch(searchTerm) {
 //  console.log(volumes);
 //});
 
+// DB Functionality -------
 var pg = require('pg');
 var conString = `postgres://ubuntu:pgpass@localhost:5432/bookdb`;
 var client = new pg.Client(conString);
 client.connect();
-//queries are queued and executed one after another once the connection becomes available
-
 
 const simpleQuery = function(table) {
   return function(options) {
@@ -193,7 +192,52 @@ const simpleCreate = function(table) {
   }
 }
 
-const simpleCreateUser = simpleCreate("user");
+const simpleUpdate = function(table) {
+  return function(arr,id) {
+    return new Promise(function(resolve,reject) {
+      client.query('BEGIN', (err) => {
+        if (err) return;
+        let updateStr = 'set'
+        for (i=0;i<arr.length;i+=1) {
+          let item = arr[i];
+          updateStr += ` ${item[0]} = '${item[1]}'`;
+          if (i !== arr.length - 1) {
+            updateStr += ','
+          }
+        }
+        updateStr += ` where id = ${id}`;
+        console.log("updateStr",updateStr)
+        client.query(`update ${table} ${updateStr}`, (err, res) => {
+          if (err) {
+            console.log("err",err);
+            rollBackDB();
+          } else {
+            let result = res.rows;
+            console.log("result:",result);
+            commitDB();
+            resolve("User details updated");
+          }
+        });
+      });
+    });
+  }
+}
+
+// splay obj into arr of key:value pairs
+function splay(obj) {
+  return new Promise(function(resolve,reject) {
+    let resultArr = Object.keys(obj).map(function(key) {
+      let arr = [];
+      arr.push(key);
+      arr.push(obj[key]);
+      return arr;
+    });
+    resolve(resultArr);
+  });
+}
+//update books set owner = 1 where id=1
+const simpleUpdateUser = simpleUpdate('users');
+const simpleCreateUser = simpleCreate('users');
 //queryBook({ value1: 1, key1: "id"}).then(function(result) {
 //  console.log("queryBook",result.rows);
 //});
@@ -228,13 +272,9 @@ app.get("/login", function (req, res) {
       res.send(obj[0]);
     } else {
       // password incorrect
-      res.send({"error":`username or password incorrect`});
+      res.send({error:`username or password incorrect`});
     }
-  })
-});
-
-queryUsers({key1:"username", value1:"jono", key2:"password", value2:"mate"}).then(function(arr) {
-  console.log(arr.rows);
+  });
 });
 
 // logout routing
@@ -242,6 +282,40 @@ app.get("/logout", function (req, res) {
     res.send({"loggedIn": false});
 });
 
+// user details routing
+app.get("/user", function (req, res) {
+  let id = req.query.id;
+  queryUsers({key1:"id", value1:id}).then(function(arr) {
+    if (arr[0]) {
+      res.send(arr[0]);
+    } else {
+      res.send({error: "user not found"});
+    }
+  });
+});
+
+// update user details routing
+app.get("/userupdate", function (req, res) {
+  let id = req.query.id;
+  let pass = req.query.pass;
+  delete req.query["__proto__"];
+  delete req.query["id"];
+  delete req.query["pass"];  
+  queryUsers({field:"id", key1:"id", value1:id, key2:"password", value2:pass}).then(function(obj) {
+    console.log("resultArr",obj[0]);
+    if (obj[0]) {
+      // password match
+      splay(req.query).then(function(arr) {
+        simpleUpdateUser(arr,id).then(function(str) {
+          res.send({message: str});
+        });
+      })
+    } else {
+      // password incorrect
+      res.send({error:`password incorrect`});
+    }
+  });
+});
 
 // sudo service postgresql start
 // psql

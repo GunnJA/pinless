@@ -5,7 +5,22 @@ $( window ).load(function() {
     let hash = window.location.hash;
     hash = hash.replace('#','');
     globalVar["userID"] = parseInt(hash);
-    loggedIn(parseInt(hash),"champ");
+    if ($("#divSettings").length) {
+      $.get(`/user?id=${parseInt(hash)}`, function(obj) {
+        if (obj.error) {
+          window.alert(obj.error);
+        } else {
+          globalVar["userObj"] = obj;
+          $("#formSettings").children(":input").each(function() {
+            let item = $(this).attr("id");
+            $(this).val(obj[item]);
+          });
+        }
+      });
+    }
+    if ($("#divLogin").length) {
+      loggedIn(parseInt(hash),"champ");
+    }
   }
 });
 
@@ -46,8 +61,13 @@ function loggedIn(id,name) {
   $("#divLogin").toggle();
   globalVar["userID"] = id;
   console.log('logged in as ID:',id);
-  $("#divLogout").append($(`<p id="welcome">Welcome to BookSwap ${name}!</p>`));
-  $("#menuUL").append($(`<li id="logout"><a href="#" onclick="loggedOut()">Logout</a></li>`));
+  $("#menuUL").append($(`<li id="allbooks"><a onclick="hrefLinks('allbooks')">All Books</a></li>`));  
+  $("#menuUL").append($(`<li id="mybooks"><a onclick="hrefLinks('mybooks')">My Books</a></li>`));
+  $("#menuUL").append($(`<li id="settings"><a onclick="hrefLinks('settings')">Settings</a></li>`));  
+  $("#menuUL").append($(`<li id="logout"><a onclick="loggedOut()">Logout</a></li>`));
+  if (name !== "champ") {
+    $("#divLogout").append($(`<p id="welcome">Welcome to BookSwap ${name}!</p>`));
+  }
 }
 
 function loggedOut() {
@@ -57,6 +77,10 @@ function loggedOut() {
     $("#welcome").remove();    
     $("#username").val('');
     $("#password").val('');
+    $("#allbooks").remove();
+    $("#mybooks").remove();
+    $("#settings").remove();
+    $("#logout").remove();    
     console.log('logged out');
     $("#logout").remove();
     } else {
@@ -84,13 +108,33 @@ $("#menu a").each(function(){
   $select.append($option);
 });
 
-function hrefLinks(type) {
+function hrefLinks(destination) {
   if (globalVar["userID"]) {
-    window.location = `/fun.html#${globalVar["userID"]}`
+    window.location = `/${destination}.html#${globalVar["userID"]}`
   } else {
-    window.location = `/fun.html`;
+    window.location = `/${destination}.html`;
   }
 }
+
+$("#update").click(function(event) {
+  event.preventDefault();
+  let updateStr = `/userupdate?id=${globalVar["userID"]}`;
+  $("#formSettings").children(":input" ).each(function() {
+    let value = $(this).val();
+    if (value && $(this).attr("readonly") != "readonly") {
+      let field = $(this).attr("id");
+      updateStr += `&${field}=${value}`;
+    }
+  });
+  console.log(updateStr);
+  $.get(updateStr, function(obj) {
+    if (obj.error) window.alert(obj.error);
+    else {
+      window.alert(obj.message);
+    }
+  });
+});
+
 
 //function ChatController($scope) {
 //        var socket = io.connect();

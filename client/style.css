@@ -28,6 +28,7 @@ ul li {
 ul li a {
 	color: #fff;
 	width: 100%;
+	cursor: pointer;
 	line-height: 60px;
 	text-decoration: none;
 }
