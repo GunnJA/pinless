@@ -67,8 +67,35 @@ h1 {
 }
 
 .bookList {
-	grid-columns: left;
-	grid-rows: auto;
+  width: 30%;
+  height: auto;
+  margin: 10px;
+  border: 3px solid black;
+  margin-left: 25px;
+  text-align: left;
+}
+
+.bookList p {
+	float:left;
+	margin-left: 15px;
+	color:black;
+  text-align: left;	
+}
+
+.bookList a {
+	float:left;
+	margin-left: 15px;
+	color:black;	
+  text-align: left;	
+}
+
+.bookButt {
+	width: 82px;
+}
+
+
+.bookImage{
+	float: left;
 }
 
 .hide{

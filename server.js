@@ -105,10 +105,14 @@ function bookSearch(searchTerm) {
       let volume = items[i].volumeInfo;
       obj['id'] = items[i].id;
       obj['title'] = volume.title;
-      obj['subTitle'] = volume.subtitle;
+      //obj['subTitle'] = volume.subtitle;
       obj['authors'] = volume.authors;
-      obj['publishedDate'] = volume.publishedDate;
-      obj['imageLinks'] = volume.imageLinks;
+      obj['published'] = volume.publishedDate;
+      if (volume.imageLinks) {
+        obj['image'] = volume['imageLinks'].smallThumbnail;
+      } else {
+        obj['image'] = "/img/blankBook1.jpg";
+      }
       obj['link'] = volume.previewLink;
       volumes.push(obj);
     }
@@ -132,18 +136,24 @@ const simpleQuery = function(table) {
   return function(options) {
     return new Promise(function(resolve,reject) {
       let string;
-      let queryEnd;      
+      let queryEnd; 
+      let queryWhere;
       if (options.field !== undefined) {
         string = options.field;
       } else {
         string = '*';
+      }
+      if (options.key1 !== undefined && options.value1 !== undefined) {
+        queryWhere = ` where ${options.key1}='${options.value1}'`
+      } else {
+        queryWhere = ""
       }
       if (options.key2 !== undefined && options.value2 !== undefined) {
         queryEnd = ` and ${options.key2}='${options.value2}';`
       } else {
         queryEnd = ";"
       }
-      let queryStr = `select ${string} from ${table} where ${options.key1}='${options.value1}'${queryEnd}`
+      let queryStr = `select ${string} from ${table}${queryWhere}${queryEnd}`
       console.log("queryStr",queryStr);
       let result = client.query(queryStr, (err, res) => {
         console.log(res.rows)
@@ -177,8 +187,9 @@ const simpleCreate = function(table) {
     return new Promise(function(resolve,reject) {
       client.query('BEGIN', (err) => {
         if (err) return;
-        client.query(`insert into users values(${insertStr}) returning id`, (err, res) => {
+        client.query(`insert into ${table} values(${insertStr}) returning id`, (err, res) => {
           if (err) {
+            console.log(`${table} rollback, err ${err}`);
             rollBackDB();
           } else {
             let result = res.rows;
@@ -238,6 +249,7 @@ function splay(obj) {
 //update books set owner = 1 where id=1
 const simpleUpdateUser = simpleUpdate('users');
 const simpleCreateUser = simpleCreate('users');
+const simpleCreateBook = simpleCreate('books');
 //queryBook({ value1: 1, key1: "id"}).then(function(result) {
 //  console.log("queryBook",result.rows);
 //});
@@ -329,6 +341,27 @@ app.get("/booksearch", function (req, res) {
   });
 });
 
+// add books route
+app.get("/addbook", function (req, res) {
+  console.log("addbook",req.query)
+  let qObj = req.query;
+  let createStr = `'${qObj.id}','${qObj.title}','{${qObj.authors}}','${qObj.image}','${qObj.link}','${qObj.published}','{${qObj.owner}}'`;
+  console.log('createstr',createStr);
+  simpleCreateBook(createStr).then(function(obj) {
+        let result = obj["0"];
+        res.send(result);
+  });
+});
+
+
+// all books route
+app.get("/allbooks", function (req, res) {
+  queryBook({}).then(function(obj) {
+        res.send(obj);
+  });
+});
+
+
 // sudo service postgresql start
 // psql
 // \c bookdb
@@ -337,3 +370,4 @@ app.get("/booksearch", function (req, res) {
 // insert into books values(default,'Black Skies','Arnaldur Indridason',null);
 // update books set owner = 1 where id=1;
 // ALTER TABLE table_name ADD COLUMN new_column_name data_type;
+//create table books (id serial primary key,title varchar not null,authors varchar[] not null, image varchar, linnk varchar, publisheddate date, owner varchar);  

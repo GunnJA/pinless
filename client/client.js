@@ -21,6 +21,16 @@ $( window ).load(function() {
     if ($("#divLogin").length) {
       loggedIn(parseInt(hash),"champ");
     }
+    if ($("#bookListAll").length) {
+      $.get(`/allbooks`, function(obj) {
+        if (obj.error) {
+          window.alert(obj.error);
+        } else {
+          console.log(obj);
+          bookDisplay(obj,$("#bookListAll"));
+        }
+      });
+    }
   }
 });
 
@@ -146,24 +156,50 @@ $("#bookSearch").click(function(event) {
         window.alert(obj.error);
       } else {
         console.log(obj);
-        bookDisplay(obj)
+        bookDisplay(obj,$("#bookList"));
+        globalVar["searchArr"] = obj;
       }
     });
   }
 });
 
-function bookDisplay(arr) {
+function bookDisplay(arr,$anchor) {
   let htmlStr = `<ul id="bookShelf">`;
   for (i=0; i<arr.length; i+=1) {
     let obj = arr[i];
-    let thumb = obj["imageLinks"].smallThumbnail;
-    console.log(thumb)
-    htmlStr += `<li id="${obj.id}" class="bookList"><img src="${thumb}" alt="${obj.title}">${obj.title}</li><br>`
+    htmlStr += bookHTML(obj)
   }
   htmlStr += '</ul>'
-  $("#bookList").append($(htmlStr));
+  console.log('htmlStr',htmlStr);
+  $anchor.append($(htmlStr));
 }
-  
+
+function bookHTML(obj) {
+  console.log(obj);
+  let str = '';
+  let authors = obj.authors;
+  str += `<li class="bookList"><img class="bookImage" src="${obj.image}" alt="${obj.title}">`;
+  str += `<p><b>${obj.title}</b><br>`;
+  str += `Authors: ${authors.join(",<br>")}<br>`;
+  str += `Published Date: ${obj.publishedDate}<br>`;
+  str += `<button class="bookButt"><a href="${obj.link}">Preview</a></button><br>`;
+  str += `<button class="bookButt"><a onclick="addBook('${i}')">Add Book</a></button></p></li>`;
+  return str;
+}
+
+function addBook(item) {
+  let book = globalVar.searchArr[item];
+  book['owner'] = globalVar.userID;
+  $.get(`/addbook?`,book, function(data) {
+    if (data.error) {
+      window.alert(data.error);
+    } else {
+      console.log(data);
+    }
+  console.log("book",book)
+  });
+}
+
 //function ChatController($scope) {
 //        var socket = io.connect();
 
