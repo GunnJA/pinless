@@ -203,6 +203,27 @@ const simpleCreate = function(table) {
   }
 }
 
+const simpleDelete = function(table) {
+  return function(id) {
+    return new Promise(function(resolve,reject) {
+      client.query('BEGIN', (err) => {
+        if (err) return;
+        client.query(`delete from ${table} where id = '${id}' returning id`, (err, res) => {
+          if (err) {
+            console.log(`${table} rollback, err ${err}`);
+            rollBackDB();
+          } else {
+            let result = res.rows;
+            console.log("deleted:",result);
+            commitDB();
+            resolve(result)
+          }
+        });
+      });
+    });
+  }
+}
+
 const simpleUpdate = function(table) {
   return function(arr,id) {
     return new Promise(function(resolve,reject) {
@@ -250,6 +271,7 @@ function splay(obj) {
 const simpleUpdateUser = simpleUpdate('users');
 const simpleCreateUser = simpleCreate('users');
 const simpleCreateBook = simpleCreate('books');
+const simpleDeleteBook = simpleDelete('books');
 //queryBook({ value1: 1, key1: "id"}).then(function(result) {
 //  console.log("queryBook",result.rows);
 //});
@@ -345,11 +367,28 @@ app.get("/booksearch", function (req, res) {
 app.get("/addbook", function (req, res) {
   console.log("addbook",req.query)
   let qObj = req.query;
-  let createStr = `'${qObj.id}','${qObj.title}','{${qObj.authors}}','${qObj.image}','${qObj.link}','${qObj.published}','{${qObj.owner}}'`;
+  let fixedTitle = qObj['title'].replace("'","''");
+  let createStr = `default,'${fixedTitle}','{${qObj.authors}}','${qObj.image}','${qObj.link}','${qObj.published}','${qObj.owner}'`;
   console.log('createstr',createStr);
   simpleCreateBook(createStr).then(function(obj) {
         let result = obj["0"];
         res.send(result);
+  });
+});
+
+// add books route
+app.get("/removebook", function (req, res) {
+  console.log("removebook",req.query)
+  let qObj = req.query;
+  queryBook({key1:"id", value1:qObj.bookid, key2:"owner", value2:qObj.id}).then(function(arr) {
+    if (arr[0]) {
+      simpleDeleteBook(qObj.bookid).then(function(obj) {
+        let result = obj["0"];
+        res.send(result);
+      });
+    } else {
+      res.send({error: "book not found"});
+    }
   });
 });
 
@@ -370,4 +409,4 @@ app.get("/allbooks", function (req, res) {
 // insert into books values(default,'Black Skies','Arnaldur Indridason',null);
 // update books set owner = 1 where id=1;
 // ALTER TABLE table_name ADD COLUMN new_column_name data_type;
-//create table books (id serial primary key,title varchar not null,authors varchar[] not null, image varchar, linnk varchar, publisheddate date, owner varchar);  
+// create table books (id serial primary key,title varchar not null,authors varchar[] not null, image varchar, linnk varchar, publisheddate date, owner varchar);  

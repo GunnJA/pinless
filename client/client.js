@@ -165,25 +165,50 @@ $("#bookSearch").click(function(event) {
 
 function bookDisplay(arr,$anchor) {
   let htmlStr = `<ul id="bookShelf">`;
+  let htmlStrOwned = `<ul id="myBookShelf">`;
   for (i=0; i<arr.length; i+=1) {
     let obj = arr[i];
-    htmlStr += bookHTML(obj)
+    if (obj.owner !== undefined && obj["owner"] == globalVar.userID) {
+      htmlStrOwned += bookHTML(obj,true);
+    } else {
+      htmlStr += bookHTML(obj,false);
+    }
   }
   htmlStr += '</ul>'
-  console.log('htmlStr',htmlStr);
-  $anchor.append($(htmlStr));
+  htmlStrOwned += '</ul><hr>'  
+  $anchor.append($(htmlStrOwned));
+  $anchor.append($(htmlStr));  
 }
 
-function bookHTML(obj) {
+function bookHTML(obj,ownedBool) {
   console.log(obj);
   let str = '';
-  let authors = obj.authors;
-  str += `<li class="bookList"><img class="bookImage" src="${obj.image}" alt="${obj.title}">`;
+  let ulClass = "bookList";
+  let butt2 = "";
+  let authors;
+  if (obj.authors !== undefined) {
+    let authArr = obj.authors;
+    authors = `Authors: ${authArr.join(",<br>")}<br>`;
+  } else {
+    authors = `Authors: Unknown<br>`;
+  }
+  if (obj.owner !== undefined) {
+    let owner = obj.owner;
+    if (ownedBool) {
+      ulClass = "owned";
+      butt2 = `<button class="bookButt"><a onclick="removeBook('${obj.id}')">Remove</a></button></p></li>`;
+    } else {
+      butt2 = `<button class="bookButt"><a onclick="addBook('${i}')">Trade</a></button></p></li>`;
+    }
+  } else {
+    butt2 = `<button class="bookButt"><a onclick="addBook('${i}')">Add Book</a></button></p></li>`;
+  }
+  str += `<li class="${ulClass}"><img class="bookImage" src="${obj.image}" alt="${obj.title}">`;
   str += `<p><b>${obj.title}</b><br>`;
-  str += `Authors: ${authors.join(",<br>")}<br>`;
+  str += authors;
   str += `Published Date: ${obj.publishedDate}<br>`;
   str += `<button class="bookButt"><a href="${obj.link}">Preview</a></button><br>`;
-  str += `<button class="bookButt"><a onclick="addBook('${i}')">Add Book</a></button></p></li>`;
+  str += butt2;
   return str;
 }
 
@@ -199,6 +224,19 @@ function addBook(item) {
   console.log("book",book)
   });
 }
+
+function removeBook(bookID) {
+  $.get(`/removebook?bookid=${bookID}&id=${globalVar.userID}`, function(data) {
+    if (data.error) {
+      window.alert(data.error);
+    } else {
+      console.log(data);
+      window.alert("book removed.");
+      location.reload();
+    }
+  });
+}
+
 
 //function ChatController($scope) {
 //        var socket = io.connect();
