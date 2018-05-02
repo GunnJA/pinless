@@ -8,6 +8,23 @@ body {
 	background: #fff;
 }
 
+body form {
+	background: #fff;
+	margin-left: 15px;
+}
+
+body form button.selected {
+	background: #fff;
+	margin-left: 5px;
+	background-color: #bdd4f9;
+	padding: 5px 2px;
+}
+
+body p {
+	background: #fff;
+	margin-left: 15px;
+}
+
 #menu {
 	background: #384047;
 	height: 60px;
@@ -118,6 +135,37 @@ h1 {
 	margin-left: 15px;
 	color:black;	
   text-align: left;	
+}
+
+.tradeList {
+	width: auto;
+  height: auto;
+  margin: 10px;
+  border-bottom: 1px solid black;
+  margin-left: 25px;
+  text-align: left;
+}
+
+.tradeList p {
+	float:left;
+	margin-left: 15px;
+	color:black;
+  text-align: left;	
+}
+
+.tradeList a {
+	float:left;
+	margin-left: 15px;
+	color:black;	
+  text-align: left;	
+}
+
+.tradeList button {
+	margin-left: 15px;
+	height: 50px;
+  text-align: center;	
+  padding-left: 15px;
+  padding-right: 15px;
 }
 
 

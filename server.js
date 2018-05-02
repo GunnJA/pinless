@@ -136,27 +136,32 @@ const simpleQuery = function(table) {
   return function(options) {
     return new Promise(function(resolve,reject) {
       let string;
-      let queryEnd; 
-      let queryWhere;
+      let query1 = "";
+      let query2 = "";      
+      let queryEnd = ";"      
       if (options.field !== undefined) {
         string = options.field;
       } else {
         string = '*';
       }
+      if (options.operator === undefined) {
+        options['operator'] = 'and'
+      }
+      if (options.operator1 === undefined) {
+        options['operator1'] = 'and'
+      }      
       if (options.key1 !== undefined && options.value1 !== undefined) {
-        queryWhere = ` where ${options.key1}='${options.value1}'`
-      } else {
-        queryWhere = ""
+        query1 = ` where ${options.key1}='${options.value1}'`
       }
       if (options.key2 !== undefined && options.value2 !== undefined) {
-        queryEnd = ` and ${options.key2}='${options.value2}';`
-      } else {
-        queryEnd = ";"
+        query2 = ` ${options.operator} ${options.key2}='${options.value2}'`
       }
-      let queryStr = `select ${string} from ${table}${queryWhere}${queryEnd}`
+      if (options.key3 !== undefined && options.value3 !== undefined) {
+        queryEnd = ` ${options.operator1} ${options.key3}='${options.value3}';`
+      }
+      let queryStr = `select ${string} from ${table}${query1}${query2}${queryEnd}`
       console.log("queryStr",queryStr);
-      let result = client.query(queryStr, (err, res) => {
-        console.log(res.rows)
+      client.query(queryStr, (err, res) => {
         resolve(res.rows);
       });
     });
@@ -165,6 +170,7 @@ const simpleQuery = function(table) {
 
 const queryUsers = simpleQuery("users");
 const queryBook = simpleQuery("books");
+const queryTrades = simpleQuery("trades");
 
 function rollBackDB() {
   client.query('ROLLBACK', (err) => {
@@ -271,7 +277,11 @@ function splay(obj) {
 const simpleUpdateUser = simpleUpdate('users');
 const simpleCreateUser = simpleCreate('users');
 const simpleCreateBook = simpleCreate('books');
+const simpleUpdateBook = simpleUpdate('books');
 const simpleDeleteBook = simpleDelete('books');
+const simpleCreateTrade = simpleCreate('trades');
+const simpleUpdateTrade = simpleUpdate('trades');
+const simpleDeleteTrade = simpleDelete('trades');
 //queryBook({ value1: 1, key1: "id"}).then(function(result) {
 //  console.log("queryBook",result.rows);
 //});
@@ -376,7 +386,7 @@ app.get("/addbook", function (req, res) {
   });
 });
 
-// add books route
+// remove books route
 app.get("/removebook", function (req, res) {
   console.log("removebook",req.query)
   let qObj = req.query;
@@ -400,6 +410,85 @@ app.get("/allbooks", function (req, res) {
   });
 });
 
+
+// trade route
+app.get("/tradebook", function (req, res) {
+  let qObj = req.query;
+  queryBook({key1:"id", value1: qObj.bookid}).then(function(obj) {
+    console.log("resultArr",obj[0]);
+    if (obj[0]) {
+      // book found
+      let createStr = `default,'${qObj.bookid}','${obj[0].title}','${qObj.id}','${obj[0].owner}',null`
+      console.log("createstr",createStr);
+      simpleCreateTrade(createStr).then(function(obj) {
+        let result = obj["0"];
+        res.send(result);
+      });
+    } else {
+      // password incorrect
+      res.send({error:`book not found`});
+    }
+  });
+});
+
+// get my trades route
+app.get("/mytrades", function (req, res) {
+  let qObj = req.query;
+  queryTrades( { operator: "or", key1:"initiator", value1: qObj.id, key2:"receiver", value2: qObj.id}).then(function(obj) {
+    console.log("resultArr",obj[0]);
+    if (obj[0]) {
+      console.log(obj);
+      // trade found
+        res.send(obj);
+    } else {
+      // password incorrect
+      res.send({error:`no trades found`});
+    }
+  });
+});
+
+
+// trade remove
+app.get("/traderemove", function (req, res) {
+  let qObj = req.query;
+  queryTrades({key1:"id", value1: qObj.tradeid, key2: "initiator", value2: qObj.id}).then(function(obj) {
+    console.log("resultArr",obj[0]);
+    if (obj[0]) {
+      // trade found
+      simpleDeleteTrade(qObj.tradeid).then(function(obj) {
+        let result = obj["0"];
+        res.send(result);
+      });
+    } else {
+      // password incorrect
+      res.send({error:`book not found`});
+    }
+  });
+});
+
+// trade route
+app.get("/trade", function (req, res) {
+  let qObj = req.query;
+  qObj["bool"] = (qObj.accept === "true");
+  queryTrades({key1:"id", value1: qObj.tradeid, key2: "receiver", value2: qObj.id}).then(function(obj) {
+    if (obj[0]) {
+      // trade found
+      console.log([["success",qObj.bool]]);
+      simpleUpdateTrade([["success",qObj.bool]],qObj.tradeid).then(function(tradeObj) {
+        if (qObj.bool) {
+          simpleUpdateBook([["owner",obj[0].initiator]],obj[0].book).then(function(bookObj) {
+            res.send(bookObj["0"]);
+            });
+        } else {
+          res.send(tradeObj["0"]);
+        }
+      });
+    } else {
+      // password incorrect
+      res.send({error:`trade not found`});
+    }
+  });
+});
 
 // sudo service postgresql start
 // psql
