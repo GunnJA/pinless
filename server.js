@@ -498,4 +498,27 @@ app.get("/trade", function (req, res) {
 // insert into books values(default,'Black Skies','Arnaldur Indridason',null);
 // update books set owner = 1 where id=1;
 // ALTER TABLE table_name ADD COLUMN new_column_name data_type;
-// create table books (id serial primary key,title varchar not null,authors varchar[] not null, image varchar, linnk varchar, publisheddate date, owner varchar);  
+// create table books (id serial primary key,title varchar not null,authors varchar[] not null, image varchar, link varchar, publisheddate varchar, owner varchar);  
+
+function createTable(table,str) {
+    return new Promise(function(resolve,reject) {
+      client.query('BEGIN', (err) => {
+        if (err) return;
+        client.query(`create table ${table} (${str});`, (err, res) => {
+          if (err) {
+            console.log(`${table} rollback, err ${err}`);
+            rollBackDB();
+          } else {
+            let result = res.rows;
+            console.log("result:",result);
+            commitDB();
+            resolve(result)
+          }
+        });
+      });
+    });
+}
+
+createTable("books", "id serial primary key,title varchar not null,authors varchar[] not null, image varchar, link varchar, publisheddate varchar, owner varchar");
+createTable("users", "id serial primary key,username varchar not null,password varchar not null, firstname varchar, lastname varchar, city varchar, state varchar");
+createTable("trades", "id serial primary key,book varchar not null,title varchar not null, initiator varchar not null, receiver varchar not null, success boolean");
