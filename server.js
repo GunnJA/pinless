@@ -128,7 +128,7 @@ function bookSearch(searchTerm) {
 
 // DB Functionality -------
 var pg = require('pg');
-var conString = `postgres://ubuntu:pgpass@localhost:5432/bookdb`;
+var conString = process.env.DATABASE_URL;
 var client = new pg.Client(conString);
 client.connect();
 
