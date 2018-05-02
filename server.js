@@ -519,6 +519,6 @@ function createTable(table,str) {
     });
 }
 
-createTable("books", "id serial primary key,title varchar not null,authors varchar[] not null, image varchar, link varchar, publisheddate varchar, owner varchar");
-createTable("users", "id serial primary key, firstname varchar, lastname varchar, city varchar, state varchar, username varchar not null,password varchar not null");
-createTable("trades", "id serial primary key,book varchar not null,title varchar not null, initiator varchar not null, receiver varchar not null, success boolean");
+createTable("books", "id serial primary key,title varchar,authors varchar[], image varchar, link varchar, publisheddate varchar, owner varchar");
+createTable("users", "id serial primary key, firstname varchar, lastname varchar, city varchar, state varchar, username varchar,password varchar");
+createTable("trades", "id serial primary key,book varchar,title varchar, initiator varchar, receiver varchar, success boolean");
