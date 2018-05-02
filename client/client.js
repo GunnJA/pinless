@@ -59,19 +59,23 @@ $("#signupSwap").click(function(event) {
 
 $("#formLogin button").click(function(event) {
   event.preventDefault();
-  if (!globalVar["userID"]) {  
-    let $this = $(this);
-    let username = $("#username").val();
-    let password = $("#password").val();
-    $.get(`/${$this.attr("id")}?user=${username}&pass=${password}`, function(obj) {
-      if (obj.error) {
-        window.alert(obj.error);
-      } else {
-        loggedIn(obj.id,username);
-      }
-    });
+  if ($("#username").val().length > 0 && $("#password").val().length > 0) {
+    if (!globalVar["userID"]) {  
+      let $this = $(this);
+      let username = $("#username").val();
+      let password = $("#password").val();
+      $.get(`/${$this.attr("id")}?user=${username}&pass=${password}`, function(obj) {
+        if (obj.error) {
+          window.alert(obj.error);
+        } else {
+          loggedIn(obj.id,username);
+        }
+      });
+    } else {
+      window.alert("Already logged in");
+    }
   } else {
-    window.alert("Already logged in");
+    window.alert("Please add a username and password");
   }
 });
 
@@ -185,7 +189,8 @@ function bookDisplay(arr,$anchor) {
     }
   }
   htmlStr += '</ul>'
-  htmlStrOwned += '</ul><hr>'  
+  htmlStrOwned += '</ul><hr>'
+  $anchor.empty();
   $anchor.append($(htmlStrOwned));
   $anchor.append($(htmlStr));  
 }
