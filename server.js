@@ -11,6 +11,29 @@ var async = require('async');
 var socketio = require('socket.io');
 var express = require('express');
 
+var crypto = require('crypto');
+const percentObj = {
+    "!":"%21",
+    "#":"%23",
+    "$":"%24",
+    "&":"%26",
+    "'":"%27",
+    "(":"%28",
+    ")":"%29",
+    "*":"%2A",
+    "+":"%2B",
+    ",":"%2C",
+    "/":"%2F",
+    ":":"%3A",
+    ";":"%3B",
+    "=":"%3D",
+    "?":"%3F",
+    "@":"%40",
+    "[":"%5B",
+    "]":"%5D",
+    " ":"%20"
+}
+
 //
 // ## SimpleServer `SimpleServer(obj)`
 //
@@ -84,43 +107,126 @@ server.listen(process.env.PORT || 3000, process.env.IP || "0.0.0.0", function(){
   console.log("Chat server listening at", addr.address + ":" + addr.port);
 });
 
-function bookSearch(searchTerm) {
-  return new Promise(function(resolve,reject) {
-  var options = { method: 'GET',
-  url: 'https://www.googleapis.com/books/v1/volumes',
-  qs: { q: searchTerm },
-  headers: 
-   { 'postman-token': '058558ba-b48e-d2c0-7250-8af94d7ace42',
-     'cache-control': 'no-cache',
-     key: 'AIzaSyArBEjA_Zz4DgI8bt_hE10ggt8mrdxvb2Q' } };
-     
-  request(options, function (error, response, body) {
-    if (error) throw new Error(error);
-    let newStr = body.toString();
-    let newJson = JSON.parse(newStr);
-    let items = newJson["items"];
-    let volumes = [];
-    for (i=0;i<items.length;i+=1) {
-      let obj = {};
-      let volume = items[i].volumeInfo;
-      obj['id'] = items[i].id;
-      obj['title'] = volume.title;
-      //obj['subTitle'] = volume.subtitle;
-      obj['authors'] = volume.authors;
-      obj['published'] = volume.publishedDate;
-      if (volume.imageLinks) {
-        obj['image'] = volume['imageLinks'].smallThumbnail;
-      } else {
-        obj['image'] = "/img/blankBook1.jpg";
-      }
-      obj['link'] = volume.previewLink;
-      volumes.push(obj);
+function percentEncode(str) {
+  let arr = str.split("");
+  let keysArr = Object.keys(percentObj);
+  let newStr = "";
+  for (i=0;i<arr.length;i+=1) {
+    let char = arr[i];
+    if (keysArr.includes(char)) {
+      newStr += percentObj[char];
+    } else {
+      newStr += char;
     }
-    //console.log(volumes);
-    resolve(volumes);
+  }
+  console.log(newStr);
+  return newStr;  
+}
+percentEncode("An encoded string!");
+percentEncode("Dogs, Cats & Mice");
+
+function getNonce() {
+  return new Promise(function(resolve,reject) {
+    crypto.randomBytes(16, function(err, buffer) {
+      let nonce = buffer.toString('hex');
+      resolve(nonce);
     });
   });
 }
+
+function getTimestamp() {
+  let d = new Date();
+  let seconds = Math.round(d.getTime() / 1000);
+  return seconds.toString();
+}
+
+function oauthHeaders(obj,options) {
+  return new Promise(function(resolve,reject) {
+    let oauth_callback = 'oob';
+    let oauth_consumer_key = 'UygfFg8iiu0T5x76q26aerrZ5'
+    //nonce              
+    getNonce().then(function(nonce) {
+      obj["oauth_nonce"] = nonce;
+      let sigArr = Object.keys(obj).map(function(key) {
+        let str = `${key}=${obj[key]}`;
+        return str;
+      });
+      //signature
+      let signature = options.method + '&' + percentEncode(options.url) + '&' + percentEncode(sigArr.join("&"));
+      console.log("signature",signature)
+      let key = percentEncode('Bs56K2ZUEfoReIRAGQXscyY5rgKmidcLGjRMtkp44iG0brP7ps') + "&"
+      if (obj.oauth_token) {
+        key += percentEncode(obj.oauth_token);
+      }
+      console.log("key",key)
+      let final = crypto.createHmac('sha1', key).update(signature).digest('base64');
+      obj["oauth_signature"] = final;
+      let authArr = Object.keys(obj).map(function(key) {
+        let str = `${percentEncode(key)}="${percentEncode(obj[key])}"`;
+        return str;
+      });
+      authArr.sort();
+      let authStr = authArr.join(", ");
+      resolve(authStr);
+    });
+  });
+}
+
+function twitterAccess(token,verifier) {
+  return new Promise(function(resolve,reject) {
+    let obj =   { oauth_token: token,
+                  oauth_consumer_key: 'UygfFg8iiu0T5x76q26aerrZ5',
+                  oauth_nonce: "",
+                  oauth_signature_method: 'HMAC-SHA1',
+                  oauth_timestamp: getTimestamp(),
+                  oauth_version: '1.0'}
+    let options = { method: 'POST',
+                    url: 'https://api.twitter.com/oauth/access_token',
+                    qs: {  oauth_verifier: verifier }}
+    oauthHeaders(obj,options).then(function(str) {
+      options['headers'] = {Authorization: "OAuth " + str};
+      console.log("options",options)
+      request(options, function (error, response, body) {
+        if (error) throw new Error(error);
+        console.log("body",body);
+        let bodyArr = body.split("&");
+        for (i=0; i<bodyArr.length; i += 1) {
+          let item = bodyArr[i];
+          let itemArr = item.split("=");
+          if (itemArr[0] === "screen_name") {
+            console.log("name",itemArr[1]);
+            resolve(itemArr[1]);
+          }
+        }
+      });
+    });
+  });
+}
+
+function twitterRequest() {
+  return new Promise(function(resolve,reject) {
+    let obj =   { oauth_callback: 'oob',
+                  oauth_consumer_key: 'UygfFg8iiu0T5x76q26aerrZ5',
+                  oauth_nonce: "",
+                  oauth_signature_method: 'HMAC-SHA1',
+                  oauth_timestamp: getTimestamp(),
+                  oauth_version: '1.0'}
+    let options = { method: 'POST',
+                    url: 'https://api.twitter.com/oauth/request_token'}
+    oauthHeaders(obj,options).then(function(str) {
+      options['headers'] = {Authorization: "OAuth " + str};
+      console.log("options",options)
+      request(options, function (error, response, body) {
+        if (error) throw new Error(error);
+        let bodyArr = body.split("&");
+        let urlRedirect = `https://api.twitter.com/oauth/authenticate?${bodyArr[0]}`;
+        console.log("tokenP",urlRedirect)//,'response',response);
+        resolve(urlRedirect)
+      });
+    });
+  });
+}
+
 
 //bookSearch("lord").then(function(volumes) {
 //  console.log(volumes);
@@ -128,7 +234,7 @@ function bookSearch(searchTerm) {
 
 // DB Functionality -------
 var pg = require('pg');
-var conString = process.env.DATABASE_URL;
+var conString = `postgres://ubuntu:pgpass@localhost:5432/bookdb`;
 var client = new pg.Client(conString);
 client.connect();
 
@@ -405,11 +511,18 @@ app.get("/removebook", function (req, res) {
 
 // all books route
 app.get("/allbooks", function (req, res) {
-  queryBook({}).then(function(obj) {
-        res.send(obj);
+  twitterRequest().then(function(obj) {
+    res.send(obj);
   });
 });
 
+// all books route
+app.get("/access", function (req, res) {
+  let qObj = req.query;
+  twitterAccess(qObj.token,qObj.verifier).then(function(obj) {
+    res.send(obj);
+  });
+});
 
 // trade route
 app.get("/tradebook", function (req, res) {
@@ -519,6 +632,6 @@ function createTable(table,str) {
     });
 }
 
-createTable("books", "id serial primary key,title varchar,authors varchar[], image varchar, link varchar, publisheddate varchar, owner varchar");
-createTable("users", "id serial primary key, firstname varchar, lastname varchar, city varchar, state varchar, username varchar,password varchar");
-createTable("trades", "id serial primary key,book varchar,title varchar, initiator varchar, receiver varchar, success boolean");
+//createTable("books", "id serial primary key,title varchar,authors varchar[], image varchar, link varchar, publisheddate varchar, owner varchar");
+//createTable("users", "id serial primary key, firstname varchar, lastname varchar, city varchar, state varchar, username varchar,password varchar");
+//createTable("trades", "id serial primary key,book varchar,title varchar, initiator varchar, receiver varchar, success boolean");

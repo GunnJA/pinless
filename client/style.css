@@ -20,7 +20,7 @@ body form button.selected {
 	padding: 5px 2px;
 }
 
-body p {
+#menu p {
 	background: #fff;
 	margin-left: 15px;
 }
@@ -32,6 +32,29 @@ body p {
 	text-align: center;
 }
 
+.grid-item-content {
+  float: left;
+  background: #D26;
+  border: 2px solid hsla(0, 0%, 0%, 0.5);
+  border-radius: 5px;
+}
+
+.grid-item-content img {
+  max-width: 300px;
+}
+
+.icon {
+	float: right;
+}
+
+.grid-item-content--height2 { height: 200px; }
+
+.comment {
+	font-weight: bold;
+	font-size: larger;
+	text-align: center;
+}
+
 ul {
 	list-style: none;
 }
@@ -40,6 +63,17 @@ ul li {
 	display: inline-block;
 	width: 84px;
 	text-align: center;
+}
+
+ul li.twitterLog {
+	position: relative;
+	right: auto;
+	margin-left: 50%;
+	line-height: 60px;
+}
+
+ul li img {
+	cursor: pointer;
 }
 
 ul li a {
@@ -109,7 +143,6 @@ h1 {
 .bookButt {
 	width: 82px;
 }
-
 
 .bookImage{
 	float: left;

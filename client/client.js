@@ -1,114 +1,96 @@
 let globalVar = {};
 
-$( window ).load(function() {
-  if (window.location.hash) {
-    let hash = window.location.hash;
-    hash = hash.replace('#','');
-    globalVar["userID"] = parseInt(hash);
-    if ($("#divSettings").length) {
-      $.get(`/user?id=${parseInt(hash)}`, function(obj) {
-        if (obj.error) {
-          window.alert(obj.error);
-        } else {
-          globalVar["userObj"] = obj;
-          $("#formSettings").children(":input").each(function() {
-            let item = $(this).attr("id");
-            $(this).val(obj[item]);
-          });
-        }
-      });
-    }
-    if ($("#divLogin").length) {
-      loggedIn(parseInt(hash),"champ");
-    }
-    if ($("#bookListAll").length) {
-      $.get(`/allbooks`, function(obj) {
-        if (obj.error) {
-          window.alert(obj.error);
-        } else {
-          console.log(obj);
-          bookDisplay(obj,$("#bookListAll"));
-        }
-      });
-      $.get(`/mytrades?id=${globalVar.userID}`, function(obj) {
-        if (obj.error) {
-          console.log(obj.error);
-        } else {
-          console.log(obj);
-          tradeDisplay(obj,$("#tradeList"));
-        }
-      });
-    }
-  }
-});
+//$( window ).load(function() {
+//});
 
-// login/out handlers
-$("#loginSwap").click(function(event) {
-  event.preventDefault();
-  $("#divSwapLog").toggle();
-  $("#divSwapSign").toggle();
-  $("#formLogin button").text("Log In").attr("id","login");
-});
-
-$("#signupSwap").click(function(event) {
-  event.preventDefault();
-  $("#divSwapLog").toggle();
-  $("#divSwapSign").toggle();
-  $("#formLogin button").text("Sign Up").attr("id","signup");
-});
-
-$("#formLogin button").click(function(event) {
-  event.preventDefault();
-  if ($("#username").val().length > 0 && $("#password").val().length > 0) {
-    if (!globalVar["userID"]) {  
-      let $this = $(this);
-      let username = $("#username").val();
-      let password = $("#password").val();
-      $.get(`/${$this.attr("id")}?user=${username}&pass=${password}`, function(obj) {
-        if (obj.error) {
-          window.alert(obj.error);
-        } else {
-          loggedIn(obj.id,username);
-        }
-      });
-    } else {
-      window.alert("Already logged in");
-    }
-  } else {
-    window.alert("Please add a username and password");
-  }
-});
-
-function loggedIn(id,name) {
-  $("#divLogin").toggle();
+function loggedIn(id) {
+  $("#twitterButt").toggle();
+  $("#formLogin").toggle();
   globalVar["userID"] = id;
   console.log('logged in as ID:',id);
-  $("#menuUL").append($(`<li id="allbooks"><a onclick="hrefLinks('allbooks')">All Books</a></li>`));  
-  $("#menuUL").append($(`<li id="mybooks"><a onclick="hrefLinks('mybooks')">Add Book</a></li>`));
-  $("#menuUL").append($(`<li id="settings"><a onclick="hrefLinks('settings')">Settings</a></li>`));  
+  $("#menuUL").append($(`<li id="menuFilter"><a onclick="filter('${id}')">My Posts</a></li>`));  
+  $("#menuUL").append($(`<li id="menuNew"><a onclick="newPost()">New Post</a></li>`));
   $("#menuUL").append($(`<li id="logout"><a onclick="loggedOut()">Logout</a></li>`));
-  if (name !== "champ") {
-    $("#divLogout").append($(`<p id="welcome">Welcome to BookSwap ${name}!</p>`));
-  }
 }
 
 function loggedOut() {
   if (globalVar["userID"]) {
-    delete globalVar["userID"];    
-    $("#divLogin").toggle();
-    $("#welcome").remove();    
-    $("#username").val('');
-    $("#password").val('');
-    $("#allbooks").remove();
-    $("#mybooks").remove();
-    $("#settings").remove();
+    delete globalVar["userID"];
+    $("#twitterButt").toggle();
+    $("#myPost").remove();
+    $("#newPost").remove();
     $("#logout").remove();    
     console.log('logged out');
-    $("#logout").remove();
-    location.href = '/';
     } else {
     window.alert("Not logged in");
   }
+}
+
+function twitterLogin() {
+  $.get(`/allbooks`, function(obj) {
+    if (obj.error) {
+      window.alert(obj.error);
+    } else {
+      console.log(obj);
+      let tokenArr = obj.split("=");
+      let tokenStr = tokenArr[1];
+      console.log(tokenStr);
+      globalVar["tokenStr"] = tokenStr;
+      window.open(obj, "_blank", "toolbar=yes,scrollbars=yes,resizable=yes,top=500,left=500,width=400,height=400");
+    }
+  });
+}
+
+$("#twitterButt").click(function(event) {
+  twitterLogin();
+  $("#formLogin").toggle();
+});
+
+$("#formLogin button").click(function(event) {
+  event.preventDefault();
+  if ($("#pin").val().length > 0 ) {
+      let pin = $("#pin").val();
+      $.get(`/access?token=${globalVar.tokenStr}&verifier=${pin}`, function(obj) {
+        if (obj.error) {
+          window.alert(obj.error);
+        } else {
+          loggedIn(obj);
+        }
+      });
+  } else {
+    window.alert("Please enter Twitter pin");
+  }
+});
+
+function filter(id) {
+  // filter posts by users id
+}
+
+$('.grid').masonry({
+  itemSelector: '.grid-item',
+  columnWidth: '.grid-sizer',
+  percentPosition: true
+});
+
+function poster(id,url,comment,likeArr) {
+  // create post html
+  let heart = "heart";
+  if (likeArr.length > 0) {
+    heart += "filled";
+  }
+  let str = `<div class="grid-item-content">`
+  str += `<img src="${url}"><br><a class="comment">${comment}</a>`
+  str += `<br><a>${id}</a><img class="icon" src="/img/${heart}.png"></div>`
+}
+
+
+function newPost() {
+  // write a form to create a new post
+  let htmlStr = `<form id="formNew">`
+  htmlStr += `Image URL:<input type="text" id="newImg"><br>`
+  htmlStr += `Message:<input type="text" id="newTxt"><br>` 
+  htmlStr += `<button type="submit" id="newPost">Post</button></form>`
+  $("#divNew").append(htmlStr);
 }
 
 // menu
@@ -131,13 +113,6 @@ $("#menu a").each(function(){
   $select.append($option);
 });
 
-function hrefLinks(destination) {
-  if (globalVar["userID"]) {
-    window.location = `/${destination}.html#${globalVar["userID"]}`
-  } else {
-    window.location = `/${destination}.html`;
-  }
-}
 
 $("#update").click(function(event) {
   event.preventDefault();
@@ -176,6 +151,7 @@ $("#bookSearch").click(function(event) {
     });
   }
 });
+
 
 function bookDisplay(arr,$anchor) {
   let htmlStr = `<ul id="bookShelf">`;
