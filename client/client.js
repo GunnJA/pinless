@@ -1,14 +1,15 @@
 let globalVar = {};
 
-//$( window ).load(function() {
-//});
+$( window ).load(function() {
+  loadPosts();
+});
 
 function loggedIn(id) {
   $("#twitterButt").toggle();
   $("#formLogin").toggle();
   globalVar["userID"] = id;
   console.log('logged in as ID:',id);
-  $("#menuUL").append($(`<li id="menuFilter"><a onclick="filter('${id}')">My Posts</a></li>`));  
+  $("#menuUL").append($(`<li id="menuFilter"><a onclick="loadPosts('${id}')">My Posts</a></li>`));  
   $("#menuUL").append($(`<li id="menuNew"><a onclick="newPost()">New Post</a></li>`));
   $("#menuUL").append($(`<li id="logout"><a onclick="loggedOut()">Logout</a></li>`));
 }
@@ -27,7 +28,7 @@ function loggedOut() {
 }
 
 function twitterLogin() {
-  $.get(`/allbooks`, function(obj) {
+  $.get(`/login`, function(obj) {
     if (obj.error) {
       window.alert(obj.error);
     } else {
@@ -72,26 +73,76 @@ $('.grid').masonry({
   percentPosition: true
 });
 
-function poster(id,url,comment,likeArr) {
+function poster(id,url,title,comment,likeArr) {
   // create post html
   let heart = "heart";
-  if (likeArr.length > 0) {
+  if (likeArr !== undefined) {
     heart += "filled";
   }
   let str = `<div class="grid-item-content">`
+  str += `<a class="title">${title}</a><br>`  
   str += `<img src="${url}"><br><a class="comment">${comment}</a>`
-  str += `<br><a>${id}</a><img class="icon" src="/img/${heart}.png"></div>`
+  str += `<br><a>(${id})</a><img class="icon" src="/img/${heart}.png"></div>`
+  return str;
 }
 
 
 function newPost() {
   // write a form to create a new post
+  $("#divNew").empty();
   let htmlStr = `<form id="formNew">`
+  htmlStr += `Title:<input type="text" id="newTitle"><br>`  
   htmlStr += `Image URL:<input type="text" id="newImg"><br>`
   htmlStr += `Message:<input type="text" id="newTxt"><br>` 
   htmlStr += `<button type="submit" id="newPost">Post</button></form>`
   $("#divNew").append(htmlStr);
 }
+
+$("#divNew").submit(function(event) {
+  event.preventDefault();
+  let title = $("#newTitle").val();
+  let url = $("#newImg").val();
+  let comment = $("#newTxt").val();
+  if (title === "" || url === "") {
+    window.alert("You need type something in the boxes bro");
+  } else {
+    $.get(`/newpost?title=${title}&user=${globalVar.userID}&url=${url}&comment=${comment}`, function(obj) {
+      if (obj.error) {
+        window.alert(obj.error);
+      } else {
+        console.log(obj);
+        loadPosts();
+        $("#divNew").empty();
+      }
+    });
+  }
+});
+
+function loadPosts(user) {
+  let getStr = "/allposts";
+  if (user !== undefined) {
+    $("#menuFilter a").attr("onclick","loadPosts()").text("All Posts");
+    getStr = `/myposts?user=${user}`
+  } else {
+    if (globalVar.userID != undefined) {
+      $("#menuFilter a").attr("onclick","loadPosts('${globalVar.userID}')").text("My Posts");
+    }
+  }
+  $.get(getStr, function(obj) {
+    if (obj.error) {
+      window.alert(obj.error);
+    } else {
+      console.log("allposts",obj);
+      let postStr = '';
+      for (i=0; i<obj.length; i += 1) {
+        let item = obj[i];
+        postStr += poster(item.username,item.url,item.title,item.comment,item.likeArr);
+      }
+      $("#grid0").empty().append($(postStr));
+    }
+  });
+}
+
 
 // menu
 let $select = $("<select></select>");

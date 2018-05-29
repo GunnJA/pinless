@@ -274,9 +274,18 @@ const simpleQuery = function(table) {
   }
 }
 
+function dbQuery(queryStr) {
+  return new Promise(function(resolve,reject) {
+    client.query(queryStr, (err, res) => {
+      resolve(res.rows);
+    });
+  });
+}
+
 const queryUsers = simpleQuery("users");
 const queryBook = simpleQuery("books");
 const queryTrades = simpleQuery("trades");
+const queryPosts = simpleQuery("posts");
 
 function rollBackDB() {
   client.query('ROLLBACK', (err) => {
@@ -381,7 +390,7 @@ function splay(obj) {
 }
 //update books set owner = 1 where id=1
 const simpleUpdateUser = simpleUpdate('users');
-const simpleCreateUser = simpleCreate('users');
+const simpleCreatePost = simpleCreate('posts');
 const simpleCreateBook = simpleCreate('books');
 const simpleUpdateBook = simpleUpdate('books');
 const simpleDeleteBook = simpleDelete('books');
@@ -409,22 +418,6 @@ app.get("/signup", function (req, res) {
       });
     }
   })
-});
-
-// login routing
-app.get("/login", function (req, res) {
-  let user = req.query.user;
-  let pass = req.query.pass;
-  queryUsers({field:"id", key1:"username", value1:user, key2:"password", value2:pass}).then(function(obj) {
-    console.log("resultArr",obj[0]);
-    if (obj[0]) {
-      // password match
-      res.send(obj[0]);
-    } else {
-      // password incorrect
-      res.send({error:`username or password incorrect`});
-    }
-  });
 });
 
 // logout routing
@@ -480,13 +473,14 @@ app.get("/booksearch", function (req, res) {
 });
 
 // add books route
-app.get("/addbook", function (req, res) {
-  console.log("addbook",req.query)
+app.get("/newpost", function (req, res) {
+  console.log("newpost",req.query)
   let qObj = req.query;
   let fixedTitle = qObj['title'].replace("'","''");
-  let createStr = `default,'${fixedTitle}','{${qObj.authors}}','${qObj.image}','${qObj.link}','${qObj.published}','${qObj.owner}'`;
+  let fixedComment = qObj['comment'].replace("'","''");  
+  let createStr = `default,'${fixedTitle}','${qObj.user}','${qObj.url}','${fixedComment}',null`;
   console.log('createstr',createStr);
-  simpleCreateBook(createStr).then(function(obj) {
+  simpleCreatePost(createStr).then(function(obj) {
         let result = obj["0"];
         res.send(result);
   });
@@ -510,8 +504,23 @@ app.get("/removebook", function (req, res) {
 
 
 // all books route
-app.get("/allbooks", function (req, res) {
+app.get("/login", function (req, res) {
   twitterRequest().then(function(obj) {
+    res.send(obj);
+  });
+});
+
+// all posts route
+app.get("/allposts", function (req, res) {
+  dbQuery("select * from posts order by id DESC;").then(function(obj) {
+    res.send(obj);
+  });
+});
+
+// my posts route
+app.get("/myposts", function (req, res) {
+  let qObj = req.query;
+  dbQuery(`select * from posts where username='${qObj.user}' order by id DESC;`).then(function(obj) {
     res.send(obj);
   });
 });
@@ -632,6 +641,7 @@ function createTable(table,str) {
     });
 }
 
+//createTable("posts", "id serial primary key,title varchar not null,username varchar not null, url varchar not null, comment varchar, hearts varchar[]");
 //createTable("books", "id serial primary key,title varchar,authors varchar[], image varchar, link varchar, publisheddate varchar, owner varchar");
 //createTable("users", "id serial primary key, firstname varchar, lastname varchar, city varchar, state varchar, username varchar,password varchar");
 //createTable("trades", "id serial primary key,book varchar,title varchar, initiator varchar, receiver varchar, success boolean");
