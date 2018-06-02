@@ -440,7 +440,7 @@ function createTable(table,str) {
     });
 }
 
-//createTable("posts", "id serial primary key,title varchar not null,username varchar not null, url varchar not null, comment varchar, hearts varchar[]");
+createTable("posts", "id serial primary key,title varchar not null,username varchar not null, url varchar not null, comment varchar, hearts varchar[]");
 //createTable("books", "id serial primary key,title varchar,authors varchar[], image varchar, link varchar, publisheddate varchar, owner varchar");
 //createTable("users", "id serial primary key, firstname varchar, lastname varchar, city varchar, state varchar, username varchar,password varchar");
 //createTable("trades", "id serial primary key,book varchar,title varchar, initiator varchar, receiver varchar, success boolean");
